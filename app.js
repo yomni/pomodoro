@@ -33,40 +33,113 @@ class AudioNotifier {
     const ctx = this.audioCtx;
     const now = ctx.currentTime;
 
-    // Harmonic two-tone chord chime (G5: 783.99Hz, C6: 1046.50Hz)
-    const notes = [
-      { freq: 783.99, start: 0, duration: 0.8 },
-      { freq: 1046.5, start: 0.15, duration: 1.0 }
+    // Rich 3-stage ascending chime (A Major chord arpeggio with warm bell harmonics)
+    // E5 (659.25Hz) -> A5 (880.00Hz) -> C#6 (1108.73Hz) + E6 (1318.51Hz)
+    const tones = [
+      { freq: 659.25, start: 0, duration: 0.9, gain: 0.4 },
+      { freq: 880.00, start: 0.18, duration: 1.1, gain: 0.45 },
+      { freq: 1108.73, start: 0.36, duration: 1.5, gain: 0.5 },
+      { freq: 1318.51, start: 0.36, duration: 1.7, gain: 0.45 }
     ];
 
-    notes.forEach(note => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+    tones.forEach(tone => {
+      const startTime = now + tone.start;
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(note.freq, now + note.start);
+      // Primary sine oscillator for pure clarity
+      const sineOsc = ctx.createOscillator();
+      sineOsc.type = 'sine';
+      sineOsc.frequency.setValueAtTime(tone.freq, startTime);
 
-      gain.gain.setValueAtTime(0, now + note.start);
-      gain.gain.linearRampToValueAtTime(0.25, now + note.start + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + note.start + note.duration);
+      // Secondary triangle oscillator for acoustic presence and bell-like body
+      const triOsc = ctx.createOscillator();
+      triOsc.type = 'triangle';
+      triOsc.frequency.setValueAtTime(tone.freq, startTime);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      const gainNode = ctx.createGain();
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(tone.gain, startTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0008, startTime + tone.duration);
 
-      osc.start(now + note.start);
-      osc.stop(now + note.start + note.duration);
+      sineOsc.connect(gainNode);
+      triOsc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      sineOsc.start(startTime);
+      triOsc.start(startTime);
+
+      sineOsc.stop(startTime + tone.duration);
+      triOsc.stop(startTime + tone.duration);
     });
   }
 }
 
-// --- 2. Storage Service (Persistence) ---
+// --- 2. Browser System Notification Service ---
+class BrowserNotificationService {
+  constructor() {
+    this.isEnabled = StorageService.getNotificationEnabled();
+  }
+
+  isSupported() {
+    return 'Notification' in window;
+  }
+
+  getPermission() {
+    if (!this.isSupported()) return 'unsupported';
+    return Notification.permission; // 'granted', 'denied', 'default'
+  }
+
+  async requestPermission() {
+    if (!this.isSupported()) {
+      alert('사용 중이신 브라우저는 시스템 알림을 지원하지 않습니다.');
+      return false;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      const granted = permission === 'granted';
+      this.setEnabled(granted);
+      return granted;
+    } catch (err) {
+      console.error('Notification permission error:', err);
+      return false;
+    }
+  }
+
+  setEnabled(val) {
+    this.isEnabled = val;
+    StorageService.saveNotificationEnabled(val);
+  }
+
+  notify({ title, body }) {
+    if (!this.isEnabled || !this.isSupported() || Notification.permission !== 'granted') {
+      return;
+    }
+
+    try {
+      const notification = new Notification(title, {
+        body,
+        silent: true, // We already play our clear custom chime
+        tag: 'pomodoro-session-alert'
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    } catch (err) {
+      console.error('Failed to trigger notification:', err);
+    }
+  }
+}
+
+// --- 3. Storage Service (Persistence) ---
 class StorageService {
   static KEYS = {
     ROUTINE: 'pomodoro_routine_steps',
     ACTIVE_INDEX: 'pomodoro_active_index',
     AUTO_START: 'pomodoro_auto_start',
     COMPLETED_COUNT: 'pomodoro_completed_count',
-    SOUND_ENABLED: 'pomodoro_sound_enabled'
+    SOUND_ENABLED: 'pomodoro_sound_enabled',
+    NOTIF_ENABLED: 'pomodoro_notif_enabled'
   };
 
   static DEFAULT_ROUTINE = [
@@ -134,6 +207,15 @@ class StorageService {
 
   static saveSoundEnabled(enabled) {
     localStorage.setItem(this.KEYS.SOUND_ENABLED, enabled ? 'true' : 'false');
+  }
+
+  static getNotificationEnabled() {
+    const val = localStorage.getItem(this.KEYS.NOTIF_ENABLED);
+    return val === null ? false : val === 'true';
+  }
+
+  static saveNotificationEnabled(enabled) {
+    localStorage.setItem(this.KEYS.NOTIF_ENABLED, enabled ? 'true' : 'false');
   }
 }
 
@@ -251,6 +333,7 @@ class TimerEngine {
 class AppController {
   constructor() {
     this.audioNotifier = new AudioNotifier();
+    this.notificationService = new BrowserNotificationService();
     this.routineSteps = StorageService.getRoutine();
     this.currentIndex = 0;
     this.autoStartNext = StorageService.getAutoStart();
@@ -262,6 +345,9 @@ class AppController {
       soundToggleBtn: document.getElementById('soundToggleBtn'),
       soundOnIcon: document.getElementById('soundOnIcon'),
       soundOffIcon: document.getElementById('soundOffIcon'),
+      notificationToggleBtn: document.getElementById('notificationToggleBtn'),
+      notifOnIcon: document.getElementById('notifOnIcon'),
+      notifOffIcon: document.getElementById('notifOffIcon'),
       settingsBtn: document.getElementById('settingsBtn'),
 
       // Routine Navigation
@@ -298,6 +384,8 @@ class AppController {
       presetDeepWorkBtn: document.getElementById('presetDeepWorkBtn'),
       stepListContainer: document.getElementById('stepListContainer'),
       addStepBtn: document.getElementById('addStepBtn'),
+      testSoundBtn: document.getElementById('testSoundBtn'),
+      browserNotificationCheckbox: document.getElementById('browserNotificationCheckbox'),
       autoStartNextCheckbox: document.getElementById('autoStartNextCheckbox'),
       saveSettingsBtn: document.getElementById('saveSettingsBtn')
     };
@@ -315,6 +403,7 @@ class AppController {
     this.bindEvents();
     this.syncSoundUI(StorageService.getSoundEnabled());
     this.audioNotifier.isEnabled = StorageService.getSoundEnabled();
+    this.syncNotificationUI();
     this.dom.autoStartNextCheckbox.checked = this.autoStartNext;
     this.dom.completedSessionsCount.textContent = this.completedCount;
 
@@ -328,6 +417,19 @@ class AppController {
       const enabled = this.audioNotifier.toggle();
       StorageService.saveSoundEnabled(enabled);
       this.syncSoundUI(enabled);
+    });
+
+    // Browser Notification Header Toggle Button
+    this.dom.notificationToggleBtn.addEventListener('click', async () => {
+      if (this.notificationService.getPermission() !== 'granted') {
+        const granted = await this.notificationService.requestPermission();
+        if (!granted && Notification.permission === 'denied') {
+          alert('브라우저에서 알림 권한이 차단되어 있습니다.\n주소창 좌측의 설정/자물쇠 아이콘에서 알림을 허용해주세요.');
+        }
+      } else {
+        this.notificationService.setEnabled(!this.notificationService.isEnabled);
+      }
+      this.syncNotificationUI();
     });
 
     // Timer Controls
@@ -379,6 +481,31 @@ class AppController {
 
     // Add Step in Dialog
     this.dom.addStepBtn.addEventListener('click', () => this.addCustomStepRow());
+
+    // Test Sound Button in Settings
+    this.dom.testSoundBtn.addEventListener('click', () => {
+      this.audioNotifier.playCompletionChime();
+    });
+
+    // Browser Notification Checkbox in Settings
+    this.dom.browserNotificationCheckbox.addEventListener('change', async (e) => {
+      if (e.target.checked) {
+        if (this.notificationService.getPermission() !== 'granted') {
+          const granted = await this.notificationService.requestPermission();
+          if (!granted) {
+            e.target.checked = false;
+            if (Notification.permission === 'denied') {
+              alert('브라우저에서 알림 권한이 차단되어 있습니다.\n주소창 좌측의 설정/자물쇠 아이콘에서 알림을 허용해주세요.');
+            }
+          }
+        } else {
+          this.notificationService.setEnabled(true);
+        }
+      } else {
+        this.notificationService.setEnabled(false);
+      }
+      this.syncNotificationUI();
+    });
 
     // Setup Drag & Drop on Step List Container
     this.setupStepListDragAndDrop();
@@ -474,14 +601,25 @@ class AppController {
   }
 
   handleSessionComplete() {
+    const currentStep = this.routineSteps[this.currentIndex] || { name: '세션' };
+    const nextIndex = (this.currentIndex + 1) % this.routineSteps.length;
+    const nextStep = this.routineSteps[nextIndex] || { name: '다음 세션', minutes: 25 };
+
+    // 1. Play enhanced crystal chime
     this.audioNotifier.playCompletionChime();
 
-    // Increment completed count
+    // 2. Trigger browser system notification
+    this.notificationService.notify({
+      title: `⏰ [${currentStep.name}] 세션 완료!`,
+      body: `다음 활동: ${nextStep.name} (${nextStep.minutes}분)가 시작됩니다.`
+    });
+
+    // 3. Increment completed count
     this.completedCount += 1;
     StorageService.saveCompletedCount(this.completedCount);
     this.dom.completedSessionsCount.textContent = this.completedCount;
 
-    // Switch to next step
+    // 4. Switch to next step
     this.goToNextStep(this.autoStartNext);
   }
 
@@ -513,10 +651,32 @@ class AppController {
     }
   }
 
+  syncNotificationUI() {
+    const isPermGranted = this.notificationService.getPermission() === 'granted';
+    const isActive = isPermGranted && this.notificationService.isEnabled;
+
+    if (isActive) {
+      this.dom.notifOnIcon.classList.remove('hidden');
+      this.dom.notifOffIcon.classList.add('hidden');
+      this.dom.notificationToggleBtn.classList.add('active');
+      this.dom.notificationToggleBtn.title = '브라우저 시스템 알림 켜짐 (클릭하여 끄기)';
+    } else {
+      this.dom.notifOnIcon.classList.add('hidden');
+      this.dom.notifOffIcon.classList.remove('hidden');
+      this.dom.notificationToggleBtn.classList.remove('active');
+      this.dom.notificationToggleBtn.title = '브라우저 시스템 알림 꺼짐 (클릭하여 켜기)';
+    }
+
+    if (this.dom.browserNotificationCheckbox) {
+      this.dom.browserNotificationCheckbox.checked = isActive;
+    }
+  }
+
   // --- Settings Modal Logic ---
   openSettings() {
     this.populateStepRows(this.routineSteps);
     this.dom.autoStartNextCheckbox.checked = this.autoStartNext;
+    this.syncNotificationUI();
     this.dom.settingsDialog.showModal();
   }
 
