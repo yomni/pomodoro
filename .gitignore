@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Build (in case we add node tools later)
+node_modules/
+dist/
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
