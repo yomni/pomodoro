@@ -110,7 +110,8 @@ class StorageService {
   }
 
   static getAutoStart() {
-    return localStorage.getItem(this.KEYS.AUTO_START) === 'true';
+    const val = localStorage.getItem(this.KEYS.AUTO_START);
+    return val === null ? true : val === 'true';
   }
 
   static saveAutoStart(value) {
@@ -379,6 +380,9 @@ class AppController {
     // Add Step in Dialog
     this.dom.addStepBtn.addEventListener('click', () => this.addCustomStepRow());
 
+    // Setup Drag & Drop on Step List Container
+    this.setupStepListDragAndDrop();
+
     // Save Settings
     this.dom.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
 
@@ -530,7 +534,19 @@ class AppController {
   addCustomStepRow(name = '새 활동', minutes = 25) {
     const row = document.createElement('div');
     row.className = 'step-item-row';
+    row.setAttribute('draggable', 'false');
+
     row.innerHTML = `
+      <div class="drag-handle" title="드래그하여 순서 변경" aria-label="드래그하여 순서 변경">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="5" r="1.5"></circle>
+          <circle cx="15" cy="5" r="1.5"></circle>
+          <circle cx="9" cy="12" r="1.5"></circle>
+          <circle cx="15" cy="12" r="1.5"></circle>
+          <circle cx="9" cy="19" r="1.5"></circle>
+          <circle cx="15" cy="19" r="1.5"></circle>
+        </svg>
+      </div>
       <input type="text" class="step-name-input" value="${this.escapeHtml(name)}" placeholder="활동명 (예: 서있기, 집중)" required>
       <div class="step-duration-wrapper">
         <input type="number" class="step-duration-input" value="${minutes}" min="1" max="180" required>
@@ -544,6 +560,22 @@ class AppController {
       </button>
     `;
 
+    // Grabbing the drag-handle enables drag on the row
+    const handle = row.querySelector('.drag-handle');
+    handle.addEventListener('mousedown', () => {
+      row.setAttribute('draggable', 'true');
+    });
+    handle.addEventListener('mouseup', () => {
+      row.setAttribute('draggable', 'false');
+    });
+    row.addEventListener('dragend', () => {
+      row.setAttribute('draggable', 'false');
+      row.classList.remove('dragging');
+    });
+
+    // Touch reordering support for mobile
+    this.bindTouchDrag(handle, row);
+
     row.querySelector('.step-delete-btn').addEventListener('click', () => {
       if (this.dom.stepListContainer.children.length <= 1) {
         alert('최소 1개 이상의 활동이 있어야 합니다.');
@@ -553,6 +585,90 @@ class AppController {
     });
 
     this.dom.stepListContainer.appendChild(row);
+  }
+
+  setupStepListDragAndDrop() {
+    const container = this.dom.stepListContainer;
+    let draggingRow = null;
+
+    container.addEventListener('dragstart', (e) => {
+      const row = e.target.closest('.step-item-row');
+      if (!row) return;
+      draggingRow = row;
+      row.classList.add('dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+      }
+    });
+
+    container.addEventListener('dragend', (e) => {
+      const row = e.target.closest('.step-item-row');
+      if (row) {
+        row.classList.remove('dragging');
+        row.setAttribute('draggable', 'false');
+      }
+      container.querySelectorAll('.step-item-row').forEach(r => {
+        r.classList.remove('dragging');
+        r.setAttribute('draggable', 'false');
+      });
+      draggingRow = null;
+    });
+
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!draggingRow) return;
+
+      const afterElement = this.getDragAfterElement(container, e.clientY);
+      if (afterElement == null) {
+        container.appendChild(draggingRow);
+      } else if (afterElement !== draggingRow) {
+        container.insertBefore(draggingRow, afterElement);
+      }
+    });
+  }
+
+  getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.step-item-row:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  bindTouchDrag(handle, row) {
+    const container = this.dom.stepListContainer;
+
+    handle.addEventListener('touchstart', () => {
+      row.classList.add('dragging');
+    }, { passive: true });
+
+    handle.addEventListener('touchmove', (e) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      e.preventDefault();
+
+      const afterElement = this.getDragAfterElement(container, touch.clientY);
+      if (afterElement == null) {
+        container.appendChild(row);
+      } else if (afterElement !== row) {
+        container.insertBefore(row, afterElement);
+      }
+    }, { passive: false });
+
+    handle.addEventListener('touchend', () => {
+      row.classList.remove('dragging');
+    });
+
+    handle.addEventListener('touchcancel', () => {
+      row.classList.remove('dragging');
+    });
   }
 
   saveSettings() {
