@@ -27,6 +27,19 @@
             <line x1="17" y1="9" x2="23" y2="15"></line>
           </svg>
         </button>
+        <button id="notificationToggleBtn" class="icon-btn" title="브라우저 시스템 알림 켜기/끄기" aria-label="브라우저 시스템 알림">
+          <svg id="notifOnIcon" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <svg id="notifOffIcon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            <path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path>
+            <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path>
+            <path d="M18 8a6 6 0 0 0-9.33-5"></path>
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+          </svg>
+        </button>
         <button id="settingsBtn" class="icon-btn" title="루틴 및 시간 설정" aria-label="루틴 및 시간 설정">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -151,8 +164,32 @@
 
       <!-- Option Toggles -->
       <section class="options-section">
+        <div class="option-row">
+          <div class="option-label-group">
+            <span class="option-title">전환 알림 사운드</span>
+            <span class="option-desc">맑고 또렷한 3단계 차임벨</span>
+          </div>
+          <button id="testSoundBtn" type="button" class="small-action-btn" title="사운드 테스트">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+            미리듣기
+          </button>
+        </div>
+
         <label class="switch-row">
-          <span>세션 종료 시 다음 단계 자동 시작</span>
+          <div class="option-label-group">
+            <span class="option-title">브라우저 시스템 알림 받기</span>
+            <span class="option-desc">다른 작업/백그라운드 상태에서도 배너 팝업</span>
+          </div>
+          <input type="checkbox" id="browserNotificationCheckbox">
+        </label>
+
+        <label class="switch-row">
+          <div class="option-label-group">
+            <span class="option-title">세션 종료 시 다음 단계 자동 시작</span>
+          </div>
           <input type="checkbox" id="autoStartNextCheckbox" checked>
         </label>
       </section>

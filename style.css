@@ -614,13 +614,66 @@ body {
   background: rgba(239, 68, 68, 0.1);
 }
 
+.options-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.option-row,
 .switch-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
-  color: var(--text-primary);
+  gap: 0.75rem;
+}
+
+.switch-row {
   cursor: pointer;
+}
+
+.option-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.option-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.option-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.small-action-btn {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.small-action-btn:hover {
+  background: var(--border-light);
+  border-color: var(--border-hover);
+}
+
+.icon-btn.active {
+  background: var(--current-accent);
+  color: #ffffff;
+  border-color: var(--current-accent);
 }
 
 .dialog-footer {
