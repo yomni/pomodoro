@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>뽀모도로 타이머</title>
+  <meta name="description" content="자유롭게 시간을 설정하고 활동을 커스텀할 수 있는 미니멀 뽀모도로 타이머">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon">⏳</span>
+        <h1 class="brand-title">Focus & Routine</h1>
+      </div>
+      <div class="header-actions">
+        <button id="soundToggleBtn" class="icon-btn" title="알림음 토글" aria-label="알림음 켜기/끄기">
+          <svg id="soundOnIcon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="soundOffIcon" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+        <button id="settingsBtn" class="icon-btn" title="루틴 및 시간 설정" aria-label="루틴 및 시간 설정">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Routine Steps Indicator -->
+    <nav class="routine-nav" aria-label="루틴 단계">
+      <div id="routineTabs" class="routine-tabs">
+        <!-- Rendered dynamically -->
+      </div>
+    </nav>
+
+    <!-- Main Timer Display -->
+    <main class="timer-card">
+      <div class="current-activity-badge">
+        <span id="activityDot" class="badge-dot"></span>
+        <span id="currentActivityName">서있기</span>
+      </div>
+
+      <div class="timer-display-wrapper">
+        <svg class="progress-ring" viewBox="0 0 280 280">
+          <circle class="progress-ring-bg" cx="140" cy="140" r="126" />
+          <circle id="progressCircle" class="progress-ring-indicator" cx="140" cy="140" r="126" />
+        </svg>
+        <div class="timer-text-content">
+          <div id="timerDisplay" class="timer-digits">40:00</div>
+          <div id="sessionStatusText" class="session-status-text">준비 완료</div>
+        </div>
+      </div>
+
+      <!-- Quick time adjustments -->
+      <div class="quick-adjust-bar">
+        <button id="quickSub1Btn" class="chip-btn" title="1분 줄이기">-1m</button>
+        <button id="quickAdd1Btn" class="chip-btn" title="1분 늘리기">+1m</button>
+        <button id="quickAdd5Btn" class="chip-btn" title="5분 늘리기">+5m</button>
+      </div>
+
+      <!-- Main Controls -->
+      <div class="timer-controls">
+        <button id="prevBtn" class="control-btn secondary" title="이전 활동" aria-label="이전 활동">
+          <svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="19 20 9 12 19 4 19 20"></polygon>
+            <line x1="5" y1="19" x2="5" y2="5"></line>
+          </svg>
+        </button>
+
+        <button id="toggleTimerBtn" class="control-btn primary" aria-label="시작">
+          <span id="toggleBtnText">시작</span>
+        </button>
+
+        <button id="resetBtn" class="control-btn secondary" title="타이머 리셋" aria-label="타이머 리셋">
+          <svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+        </button>
+
+        <button id="nextBtn" class="control-btn secondary" title="다음 활동으로 건너뛰기" aria-label="다음 활동으로 건너뛰기">
+          <svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19"></line>
+          </svg>
+        </button>
+      </div>
+    </main>
+
+    <!-- Routine Cycle Summary -->
+    <footer class="app-footer">
+      <div class="cycle-info">
+        <span>완료 세션: <strong id="completedSessionsCount">0</strong>회</span>
+        <button id="resetSessionsBtn" class="text-link-btn" title="세션 수 초기화">초기화</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Settings Dialog (Routine & Time Customizer) -->
+  <dialog id="settingsDialog" class="settings-dialog">
+    <div class="dialog-header">
+      <h2>루틴 및 시간 커스텀</h2>
+      <button id="closeSettingsBtn" class="icon-btn" aria-label="설정 닫기">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <!-- Preset Selection -->
+      <section class="preset-section">
+        <label class="section-label">추천 프리셋 불러오기</label>
+        <div class="preset-buttons">
+          <button id="presetStandingBtn" class="preset-btn">
+            <strong>스탠딩 데스크</strong>
+            <span>40분 서기 / 20분 앉기</span>
+          </button>
+          <button id="presetPomodoroBtn" class="preset-btn">
+            <strong>클래식 뽀모도로</strong>
+            <span>25분 집중 / 5분 휴식 / 15분 긴 휴식</span>
+          </button>
+          <button id="presetDeepWorkBtn" class="preset-btn">
+            <strong>딥포커스 50/10</strong>
+            <span>50분 집중 / 10분 휴식</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Routine Items Editor -->
+      <section class="items-section">
+        <div class="section-header-row">
+          <label class="section-label">세션 목록 및 시간 (순서대로 순환)</label>
+          <button id="addStepBtn" class="small-add-btn">+ 활동 추가</button>
+        </div>
+        <div id="stepListContainer" class="step-list-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Option Toggles -->
+      <section class="options-section">
+        <label class="switch-row">
+          <span>세션 종료 시 다음 단계 자동 시작</span>
+          <input type="checkbox" id="autoStartNextCheckbox">
+        </label>
+      </section>
+    </div>
+
+    <div class="dialog-footer">
+      <button id="saveSettingsBtn" class="action-btn primary-action">저장 및 적용</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
